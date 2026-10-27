@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Janaseva — Smart Infrastructure Edge Portal</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    :root {
+      --saffron: #FF9933;
+      --white: #FFFFFF;
+      --india-green: #138808;
+      --navy: #000080;
+      --gov-bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --border: #cbd5e1;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--gov-bg);
+      color: var(--text-main);
+    }
+
+    /* TOP INDIAN FLAG TRICOLOUR HEADER */
+    .tricolour-bar {
+      height: 8px;
+      background: linear-gradient(90deg, var(--saffron) 0%, var(--saffron) 33%, var(--white) 33%, var(--white) 66%, var(--india-green) 66%, var(--india-green) 100%);
+    }
+    .gov-header {
+      background: linear-gradient(135deg, #fff7ed 0%, #ffffff 50%, #f0fdf4 100%);
+      border-bottom: 3px solid #1e3a8a;
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .brand-left h1 {
+      margin: 0;
+      font-size: 34px;
+      font-weight: 900;
+      color: #1e3a8a;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-left h1 span.sub-tag {
+      font-size: 13px;
+      background: #1e3a8a;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .brand-left p.motto {
+      margin: 6px 0 0 0;
+      font-size: 17px;
+      font-style: italic;
+      font-weight: 600;
+      color: #334155;
+    }
+    .flag-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .flag-svg {
+      width: 96px;
+      height: 64px;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    }
+
+    /* TOP NAVIGATION & DEMO TOOLBAR */
+    .toolbar {
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .page-tabs {
+      display: flex;
+      gap: 10px;
+    }
+    .tab-btn {
+      background: #334155;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .tab-btn.active {
+      background: var(--saffron);
+      color: #0f172a;
+      border-color: var(--saffron);
+    }
+    .demo-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .ctrl-btn {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .ctrl-btn.warn { background: #dc2626; }
+    .ctrl-btn.cam { background: #0d9488; }
+    .ctrl-btn.gray { background: #475569; }
+
+    /* MAIN CONTAINER */
+    .container {
+      max-width: 1260px;
+      margin: 22px auto;
+      padding: 0 20px 40px 20px;
+    }
+
+    /* MASTER TITLE BANNER BOX ("Details of ration distribution system") */
+    .master-banner {
+      background: #ffffff;
+      border: 2px solid #1e3a8a;
+      border-radius: 10px;
+      padding: 16px 24px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 22px;
+    }
+    .master-banner h2 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+      color: #1e3a8a;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .sub-details-bar {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: #334155;
+      background: #f8fafc;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .sub-details-bar span strong { color: #0f172a; }
+
+    /* SCENARIO 2 POPUP NOTIFICATION BANNER */
+    .failover-popup {
+      display: none;
+      background: #fef2f2;
+      border: 2px solid #dc2626;
+      color: #991b1b;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 800;
+      text-align: center;
+      font-size: 16px;
+      margin-bottom: 18px;
+      animation: pulseAlert 1.2s infinite alternate;
+    }
+    @keyframes pulseAlert {
+      from { box-shadow: 0 0 0px rgba(220,38,38,0.2); }
+      to { box-shadow: 0 0 16px rgba(220,38,38,0.6); }
+    }
+
+    /* 3-COLUMN REGION GRID (Region 1, Region 2, Region 3) */
+    .regions-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 26px;
+      align-items: start;
+    }
+    .region-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* REGION TOP HEADER BOX ("Region 1", "Region 2", "Region 3") */
+    .region-header-box {
+      width: 100%;
+      background: #1e3a8a;
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 8px;
+      border: 2px solid #172554;
+      margin-bottom: 10px;
+    }
+
+    /* NETWORK & PING MOVING BADGES (Under Region 2 & Region 3) */
+    .net-badge-slot {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    .net-mini-badge {
+      display: flex;
+      align-items: center;
+      border: 2px solid #334155;
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    }
+    .signal-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      padding: 6px 10px;
+      border-right: 2px solid #334155;
+      height: 32px;
+    }
+    .signal-bars i {
+      display: block;
+      width: 4px;
+      background: #16a34a;
+      border-radius: 1px;
+    }
+    .signal-bars i:nth-child(1) { height: 6px; }
+    .signal-bars i:nth-child(2) { height: 10px; }
+    .signal-bars i:nth-child(3) { height: 15px; }
+    .signal-bars i:nth-child(4) { height: 20px; }
+
+    .ping-arrows {
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #1e293b;
+    }
+    .arrow-anim {
+      display: inline-block;
+      font-weight: 900;
+      color: #2563eb;
+      animation: moveDown 0.9s infinite;
+    }
+    @keyframes moveDown {
+      0% { transform: translateY(-4px); opacity: 0.3; }
+      50% { transform: translateY(2px); opacity: 1; }
+      100% { transform: translateY(5px); opacity: 0.3; }
+    }
+    /* Overload state for Scenario 2 */
+    .net-mini-badge.overload {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+    .net-mini-badge.overload .signal-bars i {
+      background: #dc2626;
+      animation: barFlicker 0.35s infinite alternate;
+    }
+    .net-mini-badge.overload .arrow-anim {
+      color: #dc2626;
+      animation-duration: 0.25s;
+    }
+    @keyframes barFlicker {
+      from { opacity: 1; }
+      to { opacity: 0.2; }
+    }
+
+    /* LOCATION NAME BOX ("Udupi", "Shivamogga", "Agumbe") */
+    .city-box {
+      width: 100%;
+      background: #ffffff;
+      border: 3px solid #475569;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+    .city-box.status-green {
+      background: #16a34a;
+      border-color: #14532d;
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(22,163,74,0.35);
+    }
+    .city-box.status-red {
+      background: #dc2626;
+      border-color: #7f1d1d;
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(220,38,38,0.4);
+    }
+
+    /* CITIZEN DETAILS CARD ("Detail of Person") */
+    .person-card {
+      width: 100%;
+      min-height: 250px;
+      background: #ffffff;
+      border: 2px solid #334155;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .person-card h3 {
+      margin: 0 0 14px 0;
+      font-size: 17px;
+      text-align: center;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      color: #1e3a8a;
+    }
+    .person-body {
+      display: grid;
+      grid-template-columns: 1.3fr 0.9fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .person-fields p {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #334155;
+    }
+    .person-fields p strong {
+      color: #0f172a;
+    }
+    .person-img-box {
+      border: 2px dashed #64748b;
+      border-radius: 8px;
+      height: 115px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      overflow: hidden;
+      text-align: center;
+      padding: 4px;
+    }
+    .waiting-overlay {
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+      margin-top: 12px;
+      font-style: italic;
+    }
+
+    /* BOTTOM RECTANGULAR BOXES & DOTTED LINE PIPELINE */
+    .bottom-pipeline {
+      margin-top: 26px;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .status-rect-box {
+      width: 100%;
+      background: #ffffff;
+      border: 3px solid #334155;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+    .status-indicator-square {
+      width: 34px;
+      height: 22px;
+      background: #334155;
+      border-radius: 4px;
+    }
+    .status-rect-box.done-green {
+      background: #16a34a;
+      border-color: #14532d;
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(22,163,74,0.35);
+    }
+    .status-rect-box.done-green .status-indicator-square {
+      background: #ffffff;
+    }
+
+    .dotted-connector {
+      height: 48px;
+      border-left: 4px dotted #475569;
+      margin: 4px 0;
+      transition: border-color 0.3s;
+    }
+    .dotted-connector.active-dots {
+      border-color: #16a34a;
+    }
+
+    /* CAMERA FALLBACK MODAL */
+    .cam-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.75);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    .cam-modal-card {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 520px;
+      width: 92%;
+      padding: 20px;
+      text-align: center;
+      border: 3px solid #0d9488;
+    }
+    .cam-modal-card img {
+      width: 100%;
+      border-radius: 8px;
+      border: 2px solid #334155;
+      margin: 12px 0;
+    }
+
+    /* ================= PAGE 2: ACADEMIC RESULTS ARCHITECTURE ================= */
+    #page-2 { display: none; }
+    .exam-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 28px;
+      text-align: center;
+    }
+    .exam-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .exam-tier-box {
+      width: 85%;
+      background: #ffffff;
+      border: 3px solid #1e3a8a;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 22px;
+      font-weight: 900;
+      color: #1e3a8a;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+    }
+    .req-row {
+      margin-top: 32px;
+      width: 92%;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .req-split-box {
+      display: flex;
+      width: 100%;
+      border: 3px solid #334155;
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+      font-weight: 800;
+      font-size: 17px;
+    }
+    .req-split-box div {
+      flex: 1;
+      padding: 14px 8px;
+    }
+    .req-split-box div:first-child {
+      border-right: 3px solid #334155;
+    }
+    .req-single-box {
+      flex: 1;
+      border: 3px solid #334155;
+      border-radius: 6px;
+      background: #fff;
+      padding: 14px 12px;
+      font-weight: 800;
+      font-size: 17px;
+    }
+    .step-svg {
+      width: 140px;
+      height: 110px;
+      margin: 6px 0;
+    }
+    .step-svg path {
+      fill: none;
+      stroke: #0f172a;
+      stroke-width: 3.5;
+      stroke-dasharray: 8 6;
+      animation: dashFlow 1s linear infinite;
+    }
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -28; }
+    }
+    .edge-device-box {
+      width: 88%;
+      background: #f0fdf4;
+      border: 3px solid #16a34a;
+      border-radius: 8px;
+      padding: 18px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #14532d;
+      box-shadow: 0 6px 14px rgba(22,163,74,0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP TRICOLOUR BAR & GOVERNMENT HEADER -->
+  <div class="tricolour-bar"></div>
+  <header class="gov-header">
+    <div class="brand-left">
+      <h1>
+        Janaseva
+        <span class="sub-tag">NIC Edge Infrastructure</span>
+      </h1>
+      <p class="motto">" Building better lives through Smart infrastructure " !</p>
+    </div>
+
+    <!-- REALISTIC INDIAN FLAG SVG -->
+    <div class="flag-box">
+      <div style="text-align:right; font-size:12px; font-weight:700; color:#334155;">
+        <div>GOVERNMENT OF INDIA</div>
+        <div style="color:#16a34a;">● PI-4 EDGE NODE ONLINE</div>
+      </div>
+      <svg class="flag-svg" viewBox="0 0 90 60">
+        <rect width="90" height="20" y="0" fill="#FF9933"/>
+        <rect width="90" height="20" y="20" fill="#FFFFFF"/>
+        <rect width="90" height="20" y="40" fill="#138808"/>
+        <circle cx="45" cy="30" r="8" fill="none" stroke="#000080" stroke-width="1.5"/>
+        <circle cx="45" cy="30" r="1.5" fill="#000080"/>
+        <g stroke="#000080" stroke-width="0.6">
+          <line x1="45" y1="22" x2="45" y2="38"/><line x1="37" y1="30" x2="53" y2="30"/>
+          <line x1="39.3" y1="24.3" x2="50.7" y2="35.7"/><line x1="50.7" y1="24.3" x2="39.3" y2="35.7"/>
+        </g>
+      </svg>
+    </div>
+  </header>
+
+  <!-- NAVIGATION & SCENARIO DEMO CONTROLS -->
+  <div class="toolbar">
+    <div class="page-tabs">
+      <button id="tab-p1" class="tab-btn active" onclick="switchPage(1)">
+        Page 1: Ration Distribution Edge System
+      </button>
+      <button id="tab-p2" class="tab-btn" onclick="switchPage(2)">
+        Page 2: Academic Results Edge Load Balancing
+      </button>
+    </div>
+
+    <div class="demo-controls">
+      <button class="ctrl-btn warn" onclick="startScenario2()">▶ Start Scenario 2 (Cloud Failover)</button>
+      <button class="ctrl-btn cam" onclick="openCameraModal()">📷 Camera Auth Fallback</button>
+      <button class="ctrl-btn" onclick="simulate1Kg()">⚖️ Demo 1kg Trigger</button>
+      <button class="ctrl-btn gray" onclick="resetSystem()">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 1: RATION DISTRIBUTION SYSTEM ==================== -->
+  <div id="page-1" class="container">
+
+    <!-- MASTER DETAILS BOX -->
+    <div class="master-banner">
+      <h2>Details of ration distribution system</h2>
+      <div class="sub-details-bar">
+        <span><strong>Active Scenario:</strong> <em id="ui-scenario">Scenario 1 (Udupi Local Edge Auth)</em></span>
+        <span><strong>Biometric Sensor:</strong> R307S Optical UART + OV5647 Cam</span>
+        <span><strong>Load Cell Live Weight:</strong> <strong id="ui-live-weight" style="color:#2563eb; font-size:16px;">0.00 kg</strong> / 1.00 kg</span>
+        <span><strong>Next Finger Target:</strong> <strong id="ui-next-target" style="color:#16a34a;">UDUPI</strong></span>
+      </div>
+    </div>
+
+    <!-- SCENARIO 2 POPUP NOTIFICATION -->
+    <div id="scenario2-popup" class="failover-popup">
+      ⚠️ CLOUD SERVER OVERLOAD (HTTP 503): Shivamogga & Agumbe Switched to Local Edge Authentication! Waiting for Fingerprint...
+    </div>
+
+    <!-- THREE REGION COLUMNS -->
+    <div class="regions-grid">
+
+      <!-- ================= COLUMN 1: REGION 1 (UDUPI) ================= -->
+      <div class="region-col">
+        <div class="region-header-box">Region 1</div>
+
+        <!-- Empty alignment slot matching Region 2 & 3 badge height -->
+        <div class="net-badge-slot">
+          <span style="font-size:12px; font-weight:800; color:#16a34a; background:#dcfce7; padding:5px 12px; border-radius:99px; border:1px solid #16a34a;">
+            ● LOCAL EDGE CACHED (0ms)
+          </span>
+        </div>
+
+        <div id="box-udupi" class="city-box">Udupi</div>
+
+        <div class="person-card">
+          <h3>Detail of Person</h3>
+          <div class="person-body">
+            <div class="person-fields">
+              <p><strong>Name :</strong> <span id="udupi-name">—</span></p>
+              <p><strong>Age :</strong> <span id="udupi-age">—</span></p>
+              <p><strong>Ration (kg) :</strong> <span id="udupi-ration">—</span></p>
+              <p><strong>Members :</strong> <span id="udupi-members">—</span></p>
+              <p style="font-size:12px; color:#16a34a; font-weight:700;" id="udupi-auth"></p>
+            </div>
+            <div class="person-img-box" id="udupi-img">
+              Image
+            </div>
+          </div>
+          <div id="udupi-wait" class="waiting-overlay">Waiting for R307S Fingerprint scan...</div>
+        </div>
+      </div>
+
+      <!-- ================= COLUMN 2: REGION 2 (SHIVAMOGGA) ================= -->
+      <div class="region-col">
+        <div class="region-header-box">Region 2</div>
+
+        <!-- Mini Network & Ping Badge [ |||| | ↓↓↓ ] -->
+        <div class="net-badge-slot">
+          <div id="badge-shivamogga" class="net-mini-badge">
+            <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+            <div class="ping-arrows">
+              <span class="arrow-anim">↓ ↓ ↓</span>
+              <span id="ping-shivamogga">24ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="box-shivamogga" class="city-box">Shivamogga</div>
+
+        <div class="person-card">
+          <h3>Detail of Person</h3>
+          <div class="person-body">
+            <div class="person-fields">
+              <p><strong>Name :</strong> <span id="shivamogga-name">—</span></p>
+              <p><strong>Age :</strong> <span id="shivamogga-age">—</span></p>
+              <p><strong>Ration (kg) :</strong> <span id="shivamogga-ration">—</span></p>
+              <p><strong>Members :</strong> <span id="shivamogga-members">—</span></p>
+              <p style="font-size:12px; color:#16a34a; font-weight:700;" id="shivamogga-auth"></p>
+            </div>
+            <div class="person-img-box" id="shivamogga-img">
+              Image
+            </div>
+          </div>
+          <div id="shivamogga-wait" class="waiting-overlay">Cloud Server Connected</div>
+        </div>
+      </div>
+
+      <!-- ================= COLUMN 3: REGION 3 (AGUMBE) ================= -->
+      <div class="region-col">
+        <div class="region-header-box">Region 3</div>
+
+        <!-- Mini Network & Ping Badge [ |||| | ↓↓↓ ] -->
+        <div class="net-badge-slot">
+          <div id="badge-agumbe" class="net-mini-badge">
+            <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+            <div class="ping-arrows">
+              <span class="arrow-anim">↓ ↓ ↓</span>
+              <span id="ping-agumbe">28ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="box-agumbe" class="city-box">Agumbe</div>
+
+        <div class="person-card">
+          <h3>Detail of Person</h3>
+          <div class="person-body">
+            <div class="person-fields">
+              <p><strong>Name :</strong> <span id="agumbe-name">—</span></p>
+              <p><strong>Age :</strong> <span id="agumbe-age">—</span></p>
+              <p><strong>Ration (kg) :</strong> <span id="agumbe-ration">—</span></p>
+              <p><strong>Members :</strong> <span id="agumbe-members">—</span></p>
+              <p style="font-size:12px; color:#16a34a; font-weight:700;" id="agumbe-auth"></p>
+            </div>
+            <div class="person-img-box" id="agumbe-img">
+              Image
+            </div>
+          </div>
+          <div id="agumbe-wait" class="waiting-overlay">Cloud Server Connected</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM PIPELINE (Under First Big Box: Ration Received -> 5s Delay -> Main Server Synced) -->
+    <div class="bottom-pipeline">
+      <div id="rect-ration-received" class="status-rect-box">
+        <span>Authenticated and ration received</span>
+        <div class="status-indicator-square"></div>
+      </div>
+
+      <div id="dots-connector" class="dotted-connector"></div>
+
+      <div id="rect-server-fetched" class="status-rect-box">
+        <span>data fetched to main server successfully.</span>
+        <div class="status-indicator-square"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== PAGE 2: ACADEMIC RESULTS DETAILS ==================== -->
+  <div id="page-2" class="container">
+    <div class="master-banner">
+      <h2>Academic Results details</h2>
+      <div class="sub-details-bar">
+        <span><strong>Architecture:</strong> Distributed Sub-Edge Result Caching</span>
+        <span><strong>Peak Traffic Protection:</strong> Zero Central Server Crash on Result Day</span>
+      </div>
+    </div>
+
+    <div class="exam-grid">
+      <!-- Column 1: SSLC -->
+      <div class="exam-col">
+        <div class="exam-tier-box">SSLC</div>
+        <div class="req-row">
+          <div class="req-split-box">
+            <div>Req 1</div>
+            <div>Req 2</div>
+          </div>
+        </div>
+        <svg class="step-svg" viewBox="0 0 140 110">
+          <path d="M 70 5 L 75 55 L 35 65 L 45 105" />
+        </svg>
+        <div class="edge-device-box">edge device</div>
+      </div>
+
+      <!-- Column 2: Post metric -->
+      <div class="exam-col">
+        <div class="exam-tier-box">Post metric</div>
+        <div class="req-row">
+          <div class="req-single-box">Req 3</div>
+        </div>
+        <svg class="step-svg" viewBox="0 0 140 110">
+          <path d="M 45 5 L 55 55 L 95 60 L 105 105" />
+        </svg>
+        <div class="edge-device-box">edge device</div>
+      </div>
+
+      <!-- Column 3: BE / M.COM -->
+      <div class="exam-col">
+        <div class="exam-tier-box">BE / M.COM</div>
+        <div class="req-row">
+          <div class="req-single-box">Req 4</div>
+          <div class="req-single-box">Req 5</div>
+        </div>
+        <svg class="step-svg" viewBox="0 0 140 110">
+          <path d="M 65 5 L 85 45 L 60 55 L 80 105" />
+        </svg>
+        <div class="edge-device-box">edge device</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OV5647 CAMERA DUAL-AUTH FALLBACK MODAL -->
+  <div id="cam-modal" class="cam-modal">
+    <div class="cam-modal-card">
+      <h3 style="margin:0; color:#0f172a;">OV5647 Pi Camera Dual-Authentication</h3>
+      <p id="cam-reason" style="font-size:13px; color:#dc2626; font-weight:700; margin:6px 0;">
+        Fingerprint sensor fallback triggered — Align citizen face in camera
+      </p>
+      <img src="/video_feed" alt="OV5647 Live Feed">
+      <div style="display:flex; justify-content:center; gap:10px;">
+        <button class="ctrl-btn cam" onclick="confirmCameraAuth()">✓ Verify Face & Authenticate Citizen</button>
+        <button class="ctrl-btn gray" onclick="closeCameraModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    function switchPage(pageNum) {
+      document.getElementById('page-1').style.display = (pageNum === 1) ? 'block' : 'none';
+      document.getElementById('page-2').style.display = (pageNum === 2) ? 'block' : 'none';
+      document.getElementById('tab-p1').classList.toggle('active', pageNum === 1);
+      document.getElementById('tab-p2').classList.toggle('active', pageNum === 2);
+    }
+
+    function fillPersonCard(region, profile) {
+      // Turn region box GREEN
+      const cityBox = document.getElementById(`box-${region}`);
+      cityBox.classList.remove('status-red');
+      cityBox.classList.add('status-green');
+
+      // Populate fields
+      document.getElementById(`${region}-name`).innerText = profile.name;
+      document.getElementById(`${region}-age`).innerText = profile.age;
+      document.getElementById(`${region}-ration`).innerText = profile.ration_kg;
+      document.getElementById(`${region}-members`).innerText = profile.members;
+      document.getElementById(`${region}-auth`).innerText = `✓ ${profile.auth_method}`;
+      document.getElementById(`${region}-wait`).innerText = `Authenticated at ${profile.timestamp} — Apply 1kg on Load Cell`;
+
+      // Render verified citizen portrait badge inside the Image box
+      document.getElementById(`${region}-img`).innerHTML = `
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="${profile.avatar_color}">
+          <circle cx="12" cy="8" r="4.5"/>
+          <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+        </svg>
+        <span style="color:#16a34a; font-size:11px;">VERIFIED ID</span>
+      `;
+
+      // Reset bottom boxes for the new weighing cycle
+      document.getElementById('rect-ration-received').classList.remove('done-green');
+      document.getElementById('rect-server-fetched').classList.remove('done-green');
+      document.getElementById('dots-connector').classList.remove('active-dots');
+    }
+
+    // SOCKET EVENTS FROM RASPBERRY PI 4
+    socket.on('region_authenticated', (data) => {
+      closeCameraModal();
+      fillPersonCard(data.region, data.profile);
+      document.getElementById('ui-next-target').innerText = data.next_target.toUpperCase();
+    });
+
+    socket.on('fingerprint_failed', (data) => {
+      document.getElementById('cam-reason').innerText = data.reason;
+      openCameraModal();
+    });
+
+    socket.on('weight_update', (data) => {
+      document.getElementById('ui-live-weight').innerText = data.kg.toFixed(2) + ' kg';
+    });
+
+    socket.on('ration_received_1kg', (data) => {
+      document.getElementById('ui-live-weight').innerText = '1.00 kg';
+      document.getElementById('rect-ration-received').classList.add('done-green');
+      document.getElementById('dots-connector').classList.add('active-dots');
+      document.getElementById(`${data.region}-wait`).innerText = '✓ 1.00 kg Dispensed! Fetching to main server (5s)...';
+    });
+
+    socket.on('main_server_synced', (data) => {
+      document.getElementById('rect-server-fetched').classList.add('done-green');
+      document.getElementById(`${data.region}-wait`).innerText = `✓ Synced to Main Server (TX: ${data.tx_id})`;
+    });
+
+    socket.on('scenario_2_started', (data) => {
+      document.getElementById('ui-scenario').innerText = 'Scenario 2 (Shivamogga & Agumbe Local Edge Failover)';
+      document.getElementById('ui-next-target').innerText = 'SHIVAMOGGA';
+
+      // Animate network & ping badges on Region 2 & Region 3
+      document.getElementById('badge-shivamogga').classList.add('overload');
+      document.getElementById('badge-agumbe').classList.add('overload');
+      document.getElementById('ping-shivamogga').innerText = '999ms ERR';
+      document.getElementById('ping-agumbe').innerText = '999ms ERR';
+
+      // Turn Shivamogga & Agumbe boxes RED
+      const shivBox = document.getElementById('box-shivamogga');
+      const agumbeBox = document.getElementById('box-agumbe');
+      shivBox.classList.remove('status-green');
+      agumbeBox.classList.remove('status-green');
+      shivBox.classList.add('status-red');
+      agumbeBox.classList.add('status-red');
+
+      // Show popup notification
+      document.getElementById('scenario2-popup').style.display = 'block';
+      document.getElementById('shivamogga-wait').innerText = 'Switched to Local Edge Auth — Scan 1st Finger...';
+      document.getElementById('agumbe-wait').innerText = 'Switched to Local Edge Auth — Scan 2nd Finger...';
+    });
+
+    socket.on('system_reset', () => {
+      window.location.reload();
+    });
+
+    // BUTTON CONTROLS
+    function startScenario2() {
+      fetch('/api/start_scenario_2', { method: 'POST' });
+    }
+    function openCameraModal() {
+      document.getElementById('cam-modal').style.display = 'flex';
+    }
+    function closeCameraModal() {
+      document.getElementById('cam-modal').style.display = 'none';
+    }
+    function confirmCameraAuth() {
+      fetch('/api/camera_auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+    }
+    function simulate1Kg() {
+      fetch('/api/simulate_1kg', { method: 'POST' });
+    }
+    function resetSystem() {
+      fetch('/api/reset', { method: 'POST' });
+    }
+  </script>
+</body>
+</html>
+
